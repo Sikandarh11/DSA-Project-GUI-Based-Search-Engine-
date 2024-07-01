@@ -1,0 +1,485 @@
+stacks 
+window object load
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//#pragma once
+//#include <iostream>
+//#include <fstream>
+//#include <string>
+//#include <vector>
+//#include <sstream>
+//#include <unordered_map>
+//#include <unordered_set>
+//#include <algorithm>
+//#include <iterator>
+//#include <thread>
+//#include <mutex>
+//#include <cctype>
+//#include <filesystem>
+//#include <exception>
+//
+//namespace fs = std::filesystem;
+//using namespace std;
+//
+//const int sizer = 1000; // Adjust size as necessary
+//
+//class node {
+//public:
+//    string word;
+//    int frequency;
+//
+//    node(const string& w) : word(w), frequency(1) {}
+//
+//    bool operator==(const node& other) const {
+//        return word == other.word;
+//    }
+//};
+//
+//// Custom hash function for node
+//struct NodeHash {
+//    size_t operator()(const node& n) const {
+//        return hash<string>()(n.word);
+//    }
+//};
+//
+//// Custom equality operator for node
+//struct NodeEqual {
+//    bool operator()(const node& n1, const node& n2) const {
+//        return n1.word == n2.word;
+//    }
+//};
+//
+//class Memory {
+//private:
+//    unordered_map<string, unordered_set<node, NodeHash, NodeEqual>> index[sizer];
+//    mutex indexMutex;
+//
+//    string normalizeWord(const string& word) {
+//        string normalized;
+//        for (char ch : word) {
+//            if (isalpha(static_cast<unsigned char>(ch))) {
+//                normalized += tolower(static_cast<unsigned char>(ch));
+//            }
+//        }
+//        return normalized;
+//    }
+//
+//    int hashFunction(const string& str) {
+//        int hash = 0;
+//        for (int i = 0; i < str.size(); i++) {
+//            hash += str[i] * i;
+//        }
+//        return hash % sizer;
+//    }
+//
+//    vector<string> splitAndFilter(const string& sentence) {
+//        unordered_set<string> ignoreWords = { "is", "am", "are", "was", "were", "be", "being", "been",
+//                                             "do", "does", "did", "have", "has", "had", "will",
+//                                             "shall", "would", "should", "can", "could", "may",
+//                                             "might", "must" };
+//
+//        istringstream iss(sentence);
+//        unordered_set<string> seenWords;
+//        vector<string> words;
+//        string word;
+//
+//        while (iss >> word) {
+//            word = normalizeWord(word);
+//            if (!word.empty() && ignoreWords.find(word) == ignoreWords.end() && seenWords.find(word) == seenWords.end()) {
+//                words.push_back(word);
+//                seenWords.insert(word);
+//            }
+//        }
+//        return words;
+//    }
+//
+//    void addOrUpdateNode(const string& word, const string& filepath) {
+//        int loc = hashFunction(word);
+//        lock_guard<mutex> guard(indexMutex);
+//        node n(word);
+//        auto& nodeSet = index[loc][filepath];
+//        auto it = nodeSet.find(n);
+//
+//        if (it != nodeSet.end()) {
+//            // Increase the frequency of the existing node
+//            node existingNode = *it;
+//            nodeSet.erase(it);
+//            existingNode.frequency++;
+//            nodeSet.insert(existingNode);
+//        }
+//        else {
+//            // Add a new node with frequency 1
+//            nodeSet.insert(n);
+//        }
+//    }
+//
+//public:
+//    void readFile(const string& filepath) {
+//        ifstream inputFile(filepath);
+//        if (!inputFile.is_open()) {
+//            cerr << "Failed to open file: " << filepath << endl;
+//            return;
+//        }
+//
+//        string line;
+//        while (getline(inputFile, line)) {
+//            vector<string> words = splitAndFilter(line);
+//            for (const auto& word : words) {
+//                addOrUpdateNode(word, filepath);
+//            }
+//        }
+//        inputFile.close();
+//    }
+//
+//    unordered_set<string> searchSingleKeyword(const string& keyword) {
+//        lock_guard<mutex> guard(indexMutex);
+//        int loc = hashFunction(keyword);
+//        if (index[loc].find(keyword) != index[loc].end()) {
+//            unordered_set<string> results;
+//            for (const auto& entry : index[loc][keyword]) {
+//                results.insert(entry.word);
+//            }
+//            return results;
+//        }
+//        return {};
+//    }
+//
+//    unordered_set<string> searchAND(const vector<string>& keywords) {
+//        if (keywords.empty()) return {};
+//
+//        unordered_set<string> result = searchSingleKeyword(keywords[0]);
+//        for (size_t i = 1; i < keywords.size(); ++i) {
+//            unordered_set<string> temp = searchSingleKeyword(keywords[i]);
+//            unordered_set<string> intersection;
+//            set_intersection(result.begin(), result.end(), temp.begin(), temp.end(),
+//                inserter(intersection, intersection.begin()));
+//            result = intersection;
+//        }
+//        return result;
+//    }
+//
+//    unordered_set<string> searchOR(const vector<string>& keywords) {
+//        unordered_set<string> result;
+//        for (const auto& keyword : keywords) {
+//            unordered_set<string> temp = searchSingleKeyword(keyword);
+//            result.insert(temp.begin(), temp.end());
+//        }
+//        return result;
+//    }
+//
+//    unordered_set<string> search(const string& query) {
+//        vector<string> words = splitAndFilter(query);
+//        if (words.size() == 1) {
+//            return searchSingleKeyword(words[0]);
+//        }
+//
+//        vector<string> keywords;
+//        string operation;
+//        if (find(words.begin(), words.end(), "AND") != words.end()) {
+//            return searchAND(keywords);
+//            //operation = "AND";
+//        }
+//        else if (find(words.begin(), words.end(), "OR") != words.end()) {
+//            return searchOR(keywords);
+//            //operation = "OR";
+//        }
+//
+//        for (const auto& word : words) {
+//            if (word != "AND" && word != "OR") {
+//                keywords.push_back(word);
+//            }
+//        }
+//
+//       /* if (operation == "AND") {
+//            
+//        }
+//        else if (operation == "OR") {
+//            
+//        }*/
+//        return {};
+//    }
+//
+//    void displayResults(const unordered_set<string>& results) {
+//        if (results.empty()) {
+//            cout << "No documents found." << endl;
+//            return;
+//        }
+//        for (const auto& doc : results) {
+//            cout << doc << endl;
+//        }
+//    }
+//
+//    void readFiles(const vector<string>& filepaths) {
+//        vector<thread> threads;
+//        for (const auto& filepath : filepaths) {
+//            threads.emplace_back(&Memory::readFile, this, filepath);
+//        }
+//        for (auto& t : threads) {
+//            t.join();
+//        }
+//    }
+//
+//    void traverseAndReadDirectory(const string& directoryPath) {
+//        vector<string> filepaths;
+//        int i = 0;
+//        try {
+//            for (const auto& entry : fs::recursive_directory_iterator(directoryPath)) {
+//                if (entry.is_regular_file() && entry.path().extension() == ".txt") {
+//                    cout << i << " " << entry.path().string() << endl;
+//                    filepaths.push_back(entry.path().string());
+//                    i++;
+//                }
+//            }
+//        }
+//        catch (...) {
+//            cerr << "Failed to open directory: " << directoryPath << endl;
+//        }
+//
+//        readFiles(filepaths);
+//        cout << "Read File Call" << endl;
+//    }
+//
+//    void displayWordsByFrequency() {
+//        vector<node> nodes;
+//        for (int i = 0; i < sizer; ++i) {
+//            for (const auto& fileMap : index[i]) {
+//                for (const auto& n : fileMap.second) {
+//                    nodes.push_back(n);
+//                }
+//            }
+//        }
+//
+//        sort(nodes.begin(), nodes.end(), [](const node& a, const node& b) {
+//            return b.frequency < a.frequency; // Sort in descending order of frequency
+//            });
+//
+//        for (const auto& n : nodes) {
+//            cout << "Word: " << n.word << ", Frequency: " << n.frequency << endl;
+//        }
+//    }
+//};
+
+//int main() {
+//    Memory memory;
+//    memory.traverseAndReadDirectory("path_to_directory");
+//
+//    memory.displayWordsByFrequency();
+//
+//    return 0;
+//}
+
+
+//
+//#pragma once
+//#include <iostream>
+//#include <fstream>
+//#include <string>
+//#include <vector>
+//#include <sstream>
+//#include <unordered_map>
+//#include <unordered_set>
+//#include <algorithm>
+//#include <iterator>
+//#include <thread>
+//#include <mutex>
+//#include <cctype>
+//#include <filesystem>
+//#include <exception>
+//
+//namespace fs = std::filesystem;
+//using namespace std;
+//
+//const int sizer = 1000; // Adjust size as necessary
+//struct node {
+//    string word;
+//    int frquency;
+//};
+//class Memory {
+//private:
+//
+//    unordered_map<string, unordered_set<string>> index[sizer];
+//    mutex indexMutex;
+//
+//    string normalizeWord(const string& word) {
+//        string normalized;
+//        for (char ch : word) {
+//            if (isalpha(static_cast<unsigned char>(ch))) {
+//                normalized += tolower(static_cast<unsigned char>(ch));
+//            }
+//        }
+//        return normalized;
+//    }
+//
+//    int hashFunction(const string& str) {
+//        int hash = 0;
+//        for (int i = 0; i < str.size(); i++) {
+//            hash += str[i] * i;
+//        }
+//        return hash % sizer;
+//    }
+//    vector<string> splitAndFilter(const string& sentence) {
+//        unordered_set<string> ignoreWords = { "is", "am", "are", "was", "were", "be", "being", "been",
+//                                             "do", "does", "did", "have", "has", "had", "will",
+//                                             "shall", "would", "should", "can", "could", "may",
+//                                             "might", "must" };
+//
+//        istringstream iss(sentence);
+//        unordered_set<string> seenWords;
+//        vector<string> words;
+//        string word;
+//
+//        while (iss >> word) {
+//            word = normalizeWord(word);
+//            if (!word.empty() && ignoreWords.find(word) == ignoreWords.end() && seenWords.find(word) == seenWords.end()) {
+//                words.push_back(word);
+//                seenWords.insert(word);
+//            }
+//        }
+//        return words;
+//    }
+//    unordered_set<string> searchSingleKeyword(const string& keyword) {
+//        lock_guard<mutex> guard(indexMutex);
+//        int loc = hashFunction(keyword);
+//        if (index[loc].find(keyword) != index[loc].end()) {
+//            return index[loc][keyword];
+//        }
+//        return {};
+//    }
+//    unordered_set<string> searchAND(const vector<string>& keywords) {
+//        if (keywords.empty()) return {};
+//
+//        unordered_set<string> result = searchSingleKeyword(keywords[0]);
+//        for (size_t i = 1; i < keywords.size(); ++i) {
+//            unordered_set<string> temp = searchSingleKeyword(keywords[i]);
+//            unordered_set<string> intersection;
+//            set_intersection(result.begin(), result.end(), temp.begin(), temp.end(),
+//                inserter(intersection, intersection.begin()));
+//            result = intersection;
+//        }
+//        return result;
+//    }
+//
+//    unordered_set<string> searchOR(const vector<string>& keywords) {
+//        unordered_set<string> result;
+//        for (const auto& keyword : keywords) {
+//            unordered_set<string> temp = searchSingleKeyword(keyword);
+//            result.insert(temp.begin(), temp.end());
+//        }
+//        return result;
+//    }
+//
+//    void readFile(const string& filepath) {
+//        ifstream inputFile(filepath);
+//        if (!inputFile.is_open()) {
+//            cerr << "Failed to open file: " << filepath << endl;
+//            return;
+//        }
+//
+//        string line;
+//        while (getline(inputFile, line)) {
+//            vector<string> words = splitAndFilter(line);
+//            lock_guard<mutex> guard(indexMutex);
+//            for (const auto& word : words) {
+//                int loc = hashFunction(word);
+//                index[loc][word].insert(filepath);
+//            }
+//        }
+//        inputFile.close();
+//    }
+//    void displayResults(const unordered_set<string>& results) {
+//        if (results.empty()) {
+//            cout << "No documents found." << endl;
+//            return;
+//        }
+//        for (const auto& doc : results) {
+//            cout << doc << endl;
+//        }
+//    }
+//
+//    void readFiles(const vector<string>& filepaths) {
+//        vector<thread> threads;
+//        for (const auto& filepath : filepaths) {
+//            threads.emplace_back(&Memory::readFile, this, filepath);
+//        }
+//        for (auto& t : threads) {
+//            t.join();
+//        }
+//    }
+//public:
+//
+//    unordered_set<string> search(const string& query) {
+//        vector<string> words = splitAndFilter(query);
+//        if (words.size() == 1) {
+//            return searchSingleKeyword(words[0]);
+//        }
+//
+//        vector<string> keywords;
+//        string operation;
+//        if (find(words.begin(), words.end(), "AND") != words.end()) {
+//            operation = "AND";
+//        }
+//        else if (find(words.begin(), words.end(), "OR") != words.end()) {
+//            operation = "OR";
+//        }
+//
+//        for (const auto& word : words) {
+//            if (word != "AND" && word != "OR") {
+//                keywords.push_back(word);
+//            }
+//        }
+//
+//        if (operation == "AND") {
+//            return searchAND(keywords);
+//        }
+//        else if (operation == "OR") {
+//            return searchOR(keywords);
+//        }
+//        return {};
+//    }
+//
+//    void traverseAndReadDirectory(const string& directoryPath) {
+//        vector<string> filepaths;
+//        int i = 0;
+//        try {
+//            for (const auto& entry : fs::recursive_directory_iterator(directoryPath)) {
+//                if (entry.is_regular_file() && entry.path().extension() == ".txt") {
+//                    cout << i << " " << entry.path().string() << endl;
+//                    filepaths.push_back(entry.path().string());
+//                    i++;
+//                }
+//            }
+//        }
+//        catch (...) {
+//            cerr << "Failed to open directory: " << directoryPath << endl;
+//        }
+//
+//        readFiles(filepaths);
+//    }
+//
+//};
+//
